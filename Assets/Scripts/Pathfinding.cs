@@ -20,49 +20,51 @@ public class Pathfinding : MonoBehaviour {
         StartCoroutine(FindPath(startPos, targetPos));
     }
 
-    IEnumerator FindPath(Vector3 startPos, Vector3 targetPos)
+    IEnumerator FindPath(Vector3 startPos, Vector3 targetPos) // Based on Pseudo Code for A*
     {
         Vector3[] waypoints = new Vector3[0];
         bool pathSuccess = false;
 
-        Node startNode = grid.NodeFromWorldPoint(startPos);
-        Node targetNode = grid.NodeFromWorldPoint(targetPos);
+        Node startNode = grid.NodeFromWorldPoint(startPos); // Open Set
+        Node targetNode = grid.NodeFromWorldPoint(targetPos); // Closed Set
 
         if (startNode.walkable && targetNode.walkable)
         {
 
             Heap<Node> openSet = new Heap<Node>(grid.MaxSize);
             HashSet<Node> closedSet = new HashSet<Node>();
-            openSet.Add(startNode);
+            openSet.Add(startNode); // Add the start node to OPEN
 
-            while (openSet.Count > 0)
+            while (openSet.Count > 0) // Loop
             {
-                Node currentNode = openSet.RemoveFirst();
-                closedSet.Add(currentNode);
+                // current = node in OPEN with the lowest f_cost
+                Node currentNode = openSet.RemoveFirst(); // remove current from OPEN
+                closedSet.Add(currentNode); // add current to CLOSED
 
-                if (currentNode == targetNode)
+                if (currentNode == targetNode) // if current is the target node //path has been found
                 {
                     pathSuccess = true;
-                    break;
+                    break; // return
                 }
 
-                foreach (Node neighbour in grid.GetNeighbours(currentNode))
+                foreach (Node neighbour in grid.GetNeighbours(currentNode)) // foreach neighbour of the current node
                 {
-                    if (!neighbour.walkable || closedSet.Contains(neighbour))
+                    if (!neighbour.walkable || closedSet.Contains(neighbour)) // if neighbour is not traversable or neighbour is in CLOSED
                     {
-                        continue;
+                        continue; // skip to the next neighbour
                     }
 
                     int newMovementCostToNeighbour = currentNode.gCost + GetDistance(currentNode, neighbour);
-                    if (newMovementCostToNeighbour < neighbour.gCost || !openSet.Contains(neighbour))
+                    if (newMovementCostToNeighbour < neighbour.gCost || !openSet.Contains(neighbour)) // if new path to neighbour is shorter OR neighbour is not in OPEN
                     {
+                        // set f_cost of neighbour
                         neighbour.gCost = newMovementCostToNeighbour;
                         neighbour.hCost = GetDistance(neighbour, targetNode);
-                        neighbour.parent = currentNode;
+                        neighbour.parent = currentNode; // set parent of neighbour to current
 
-                        if (!openSet.Contains(neighbour))
+                        if (!openSet.Contains(neighbour)) // if neighbour is not in OPEN
                         {
-                            openSet.Add(neighbour);
+                            openSet.Add(neighbour); // add neighbour to OPEN
                         }
                         else
                         {
