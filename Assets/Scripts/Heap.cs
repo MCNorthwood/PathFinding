@@ -1,6 +1,8 @@
 ﻿using System;
 
-public class Heap<T> where T : IHeapItem<T> {
+public class Heap<T> where T : IHeapItem<T>
+{
+    // This is to make the search more efficient, to allow a search on a larger grid quicker.
 
     T[] items;
     int currentItemCount;

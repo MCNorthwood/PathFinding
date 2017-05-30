@@ -1,17 +1,34 @@
 ﻿using System.Collections;
 using UnityEngine;
 
-public class Unit : MonoBehaviour {
-
+public class Unit : MonoBehaviour
+{
     public Transform target;
-    float speed = 20;
+    float speed = 30;
     Vector3[] path;
     int targetIndex;
+    public bool clicked = false;
 
-    void Start()
+    Canvas canvas;
+
+    private void Start()
     {
-        PathRequestManager.RequestPath(transform.position, target.position, OnPathFound);
-    } 
+        canvas = GetComponentInChildren<Canvas>();
+        if (clicked)    // for scene 3 to start all of them at once.
+        {
+            PathRequestManager.RequestPath(transform.position, target.position, OnPathFound);
+        }
+    }
+
+    public void StartPath()
+    {
+        if (!clicked)
+        {
+            PathRequestManager.RequestPath(transform.position, target.position, OnPathFound);
+            clicked = true;
+            canvas.gameObject.SetActive(false);
+        }
+    }
 
     public void OnPathFound(Vector3[] newPath, bool pathSuccessful)
     {
@@ -39,7 +56,7 @@ public class Unit : MonoBehaviour {
                 currentWaypoint = path[targetIndex];
             }
 
-            transform.position = Vector3.MoveTowards(transform.position, currentWaypoint, speed * Time.deltaTime);
+            transform.position = Vector3.MoveTowards(transform.position, currentWaypoint, speed * Time.deltaTime); //move to next waypoint
             yield return null;
         }
     }

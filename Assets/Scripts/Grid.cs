@@ -1,14 +1,14 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
 
-public class Grid : MonoBehaviour {
-
+public class Grid : MonoBehaviour
+{
     public bool displayGridGizmos;
 
-    public LayerMask unwalkableMask;
+    public LayerMask unwalkable;
     public Vector2 gridWorldSize;
-    public float nodeRadius;
-    Node[,] grid;
+    public float nodeRadius; // Keep to about 0.5 due to it taking up to much room otherwise
+    public Node[,] matrix;
 
     float nodeDiameter;
     int gridSizeX, gridSizeY;
@@ -31,7 +31,7 @@ public class Grid : MonoBehaviour {
 
     void CreateGrid()
     {
-        grid = new Node[gridSizeX, gridSizeY];
+        matrix = new Node[gridSizeX, gridSizeY];
         Vector3 worldBottomLeft = transform.position - Vector3.right * gridWorldSize.x / 2 - Vector3.forward * gridWorldSize.y /2;
 
         for (int i = 0; i < gridSizeX; i++)
@@ -39,30 +39,30 @@ public class Grid : MonoBehaviour {
             for (int j = 0; j < gridSizeY; j++)
             {
                 Vector3 worldPoint = worldBottomLeft + Vector3.right * (i * nodeDiameter + nodeRadius) + Vector3.forward * (j * nodeDiameter + nodeRadius);
-                bool walkable = !(Physics.CheckSphere(worldPoint, nodeRadius, unwalkableMask));
-                grid[i, j] = new Node(walkable, worldPoint, i, j);
+                bool walkable = !(Physics.CheckSphere(worldPoint, nodeRadius, unwalkable)); // Checks for collisions to see if it is walkable
+                matrix[i, j] = new Node(walkable, worldPoint, i, j); // populate the grid with nodes
             }
         }
     }
 
     public List<Node> GetNeighbours(Node node)
     {
-        List<Node> neighbours = new List<Node>();
-        for (int x = -1; x <= 1; x++)
+        List<Node> neighbours = new List<Node>(); // loop through x and y to find neighbours
+        for (int i = -1; i <= 1; i++)
         {
-            for (int y = -1; y <= 1; y++)
+            for (int j = -1; j <= 1; j++)
             {
-                if(x==0 && y == 0)
+                if(i==0 && j == 0)
                 {
                     continue;
                 }
 
-                int checkX = node.gridX + x;
-                int checkY = node.gridY + y;
+                int checkX = node.gridX + i;
+                int checkY = node.gridY + j;
 
                 if(checkX >= 0 && checkX < gridSizeX && checkY >= 0 && checkY < gridSizeY)
                 {
-                    neighbours.Add(grid[checkX, checkY]);
+                    neighbours.Add(matrix[checkX, checkY]);
                 }
             }
         }
@@ -70,28 +70,29 @@ public class Grid : MonoBehaviour {
         return neighbours;
     }
 
-    public Node NodeFromWorldPoint(Vector3 worldPos)
+    public Node WorldPointNode(Vector3 worldPos) // changes node into a co-ord
     {
-        float percentX = (worldPos.x + gridWorldSize.x / 2) / gridWorldSize.x;
-        float percentY = (worldPos.z + gridWorldSize.y / 2) / gridWorldSize.y;
-        percentX = Mathf.Clamp01(percentX);
-        percentY = Mathf.Clamp01(percentY);
+        // Find a percentage for x and y  between 0 and 1 and clamp it
+        float perX = (float)(worldPos.x / gridWorldSize.x + 0.5);
+        float perY = (float)(worldPos.z / gridWorldSize.y + 0.5);
+        perX = Mathf.Clamp01(perX);
+        perY = Mathf.Clamp01(perY);
 
-        int x = Mathf.RoundToInt((gridSizeX - 1) * percentX);
-        int y = Mathf.RoundToInt((gridSizeY - 1) * percentY);
-        return grid[x, y];
+        int x = Mathf.RoundToInt((gridSizeX - 1) * perX);
+        int y = Mathf.RoundToInt((gridSizeY - 1) * perY);
+        return matrix[x, y];
     }
 
-    void OnDrawGizmos()
+    void OnDrawGizmos() // Display the grid in Unity Editor, allows to see walkable in white and unwalkable in red
     {
         Gizmos.DrawWireCube(transform.position, new Vector3(gridWorldSize.x, 1, gridWorldSize.y));
 
-        if (grid != null && displayGridGizmos)
+        if (matrix != null && displayGridGizmos)
         {
-            foreach (Node n in grid)
+            foreach (Node node in matrix)
             {
-                Gizmos.color = (n.walkable) ? Color.white : Color.red;
-                Gizmos.DrawCube(n.worldPosition, Vector3.one * (nodeDiameter - .1f));
+                Gizmos.color = (node.walkable) ? Color.white : Color.black;
+                Gizmos.DrawCube(node.worldPosition, Vector3.one * (nodeDiameter - .1f));
             }
         }
     }

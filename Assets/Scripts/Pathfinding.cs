@@ -1,13 +1,17 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 using System;
 
-public class Pathfinding : MonoBehaviour {
+public class Pathfinding : MonoBehaviour
+{
 
     PathRequestManager requestManager;
 
     Grid grid;
+
+    public Text displayFCost;
 
     void Awake()
     {
@@ -20,47 +24,48 @@ public class Pathfinding : MonoBehaviour {
         StartCoroutine(FindPath(startPos, targetPos));
     }
 
-    IEnumerator FindPath(Vector3 startPos, Vector3 targetPos) // Based on Pseudo Code for A*
+    IEnumerator FindPath(Vector3 startPos, Vector3 targetPos) 
     {
-        Vector3[] waypoints = new Vector3[0];
+        Vector3[] wayp = new Vector3[0];
         bool pathSuccess = false;
 
-        Node startNode = grid.NodeFromWorldPoint(startPos); // Open Set
-        Node targetNode = grid.NodeFromWorldPoint(targetPos); // Closed Set
+        Node startNode = grid.WorldPointNode(startPos); 
+        Node targetNode = grid.WorldPointNode(targetPos); 
 
-        if (startNode.walkable && targetNode.walkable)
+        if (startNode.walkable && targetNode.walkable) // start of Pseudo Code
         {
 
-            Heap<Node> openSet = new Heap<Node>(grid.MaxSize);
-            HashSet<Node> closedSet = new HashSet<Node>();
+            Heap<Node> openSet = new Heap<Node>(grid.MaxSize); // OPEN, heap used to speed up the process
+            HashSet<Node> closedSet = new HashSet<Node>(); // CLOSED
             openSet.Add(startNode); // Add the start node to OPEN
 
             while (openSet.Count > 0) // Loop
             {
                 // current = node in OPEN with the lowest f_cost
-                Node currentNode = openSet.RemoveFirst(); // remove current from OPEN
-                closedSet.Add(currentNode); // add current to CLOSED
+                Node currNode = openSet.RemoveFirst(); // remove current from OPEN
+                closedSet.Add(currNode); // add current to CLOSED
 
-                if (currentNode == targetNode) // if current is the target node //path has been found
+                if (currNode == targetNode) // if current is the target node, the path has been found
                 {
+                    displayFCost.text = "F Cost: " + currNode.fCost;
                     pathSuccess = true;
                     break; // return
                 }
 
-                foreach (Node neighbour in grid.GetNeighbours(currentNode)) // foreach neighbour of the current node
+                foreach (Node neighbour in grid.GetNeighbours(currNode)) // foreach neighbour of the current node
                 {
                     if (!neighbour.walkable || closedSet.Contains(neighbour)) // if neighbour is not traversable or neighbour is in CLOSED
                     {
                         continue; // skip to the next neighbour
                     }
 
-                    int newMovementCostToNeighbour = currentNode.gCost + GetDistance(currentNode, neighbour);
-                    if (newMovementCostToNeighbour < neighbour.gCost || !openSet.Contains(neighbour)) // if new path to neighbour is shorter OR neighbour is not in OPEN
+                    int movementCostToNeighbour = currNode.gCost + Cost(currNode, neighbour);
+                    if (movementCostToNeighbour < neighbour.gCost || !openSet.Contains(neighbour)) // if new path to neighbour is shorter OR neighbour is not in OPEN
                     {
                         // set f_cost of neighbour
-                        neighbour.gCost = newMovementCostToNeighbour;
-                        neighbour.hCost = GetDistance(neighbour, targetNode);
-                        neighbour.parent = currentNode; // set parent of neighbour to current
+                        neighbour.gCost = movementCostToNeighbour;
+                        neighbour.hCost = Cost(neighbour, targetNode);
+                        neighbour.parent = currNode; // set parent of neighbour to current
 
                         if (!openSet.Contains(neighbour)) // if neighbour is not in OPEN
                         {
@@ -74,32 +79,35 @@ public class Pathfinding : MonoBehaviour {
                 }
             }
         }
+
         yield return null;
+
         if (pathSuccess)
         {
-            waypoints = RetracePath(startNode, targetNode);
+            wayp = RetracePath(startNode, targetNode);
         }
-        requestManager.FinishedProcessingPath(waypoints, pathSuccess);
+        requestManager.FinishedProcessingPath(wayp, pathSuccess);
     }
 
     Vector3[] RetracePath(Node startNode, Node endNode)
     {
         List<Node> path = new List<Node>();
-        Node currentNode = endNode;
+        Node current = endNode;
 
-        while(currentNode != startNode)
+        while(current != startNode)
         {
-            path.Add(currentNode);
-            currentNode = currentNode.parent;
+            path.Add(current);
+            current = current.parent;
         }
-        Vector3[] waypoints = SimplifyPath(path);
-        Array.Reverse(waypoints);
-        return waypoints;
+
+        Vector3[] wayp = SimplifyPath(path);
+        Array.Reverse(wayp);
+        return wayp;
     }
 
     Vector3[] SimplifyPath(List<Node> path)
     {
-        List<Vector3> waypoints = new List<Vector3>();
+        List<Vector3> wayp = new List<Vector3>();
         Vector2 directionOld = Vector2.zero;
 
         for (int i = 1; i < path.Count; i++)
@@ -107,25 +115,25 @@ public class Pathfinding : MonoBehaviour {
             Vector2 directionNew = new Vector2(path[i - 1].gridX - path[i].gridX, path[i - 1].gridY - path[i].gridY);
             if(directionNew != directionOld)
             {
-                waypoints.Add(path[i].worldPosition);
+                wayp.Add(path[i].worldPosition);
             }
             directionOld = directionNew;
         }
-        return waypoints.ToArray();
+        return wayp.ToArray();
     }
 
-    int GetDistance(Node nodeA, Node nodeB)
+    int Cost(Node A, Node B) // Get the distance between nodes 
     {
-        int distX = Mathf.Abs(nodeA.gridX - nodeB.gridX);
-        int distY = Mathf.Abs(nodeA.gridY - nodeB.gridY);
+        int distX = Mathf.Abs(A.gridX - B.gridX);
+        int distY = Mathf.Abs(A.gridY - B.gridY);
 
-        if(distX > distY)
+        if (distX > distY)
         {
-            return 14 * distY + 10 * (distX - distY);
+            return (int)Math.Sqrt(Math.Pow(14 * distY, 2) + Math.Pow(10 * (distX - distY), 2));
         }
         else
         {
-            return 14 * distX + 10 * (distY - distX);
+            return (int)Math.Sqrt(Math.Pow(14 * distX, 2) + Math.Pow(10 * (distY - distX), 2));
         }
     }
 }
