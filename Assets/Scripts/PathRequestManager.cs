@@ -2,20 +2,21 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PathRequestManager : MonoBehaviour {
+public class PathRequestManager : MonoBehaviour
+{
 
     Queue<PathRequest> pathRequestQueue = new Queue<PathRequest>();
     PathRequest currentPathRequest;
 
     static PathRequestManager instance;
-    Pathfinding pathfinding;
+    Pathfinding pathfind;
 
     bool isProcessingPath;
 
     void Awake()
     {
         instance = this;
-        pathfinding = GetComponent<Pathfinding>();
+        pathfind = GetComponent<Pathfinding>();
     }
 
     public static void RequestPath(Vector3 pathStart, Vector3 pathEnd, Action<Vector3[], bool> callback)
@@ -31,7 +32,7 @@ public class PathRequestManager : MonoBehaviour {
         {
             currentPathRequest = pathRequestQueue.Dequeue();
             isProcessingPath = true;
-            pathfinding.StartFindPath(currentPathRequest.pathStart, currentPathRequest.pathEnd);
+            pathfind.StartFindPath(currentPathRequest.pathStart, currentPathRequest.pathEnd);
         }
     }
 
